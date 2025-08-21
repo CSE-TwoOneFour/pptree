@@ -26,17 +26,13 @@ class PPTStyleAnalyzer:
     def analyze_pdf_with_gpt4v(self, pdf_file):
         """PDF를 페이지별 이미지로 변환 후 분석"""
         try:
-            # PDF 파일을 바이트로 읽기
             pdf_bytes = pdf_file.read()
-            pdf_file.seek(0)  # 파일 포인터 리셋
-
-            # PyMuPDF로 PDF 열기
+            pdf_file.seek(0)  
             doc = fitz.open(stream=pdf_bytes, filetype="pdf")
             all_styles = []
 
             st.info(f"PDF에서 총 {doc.page_count}페이지를 발견했습니다.")
 
-            # 최대 10페이지까지만 분석 (API 비용 절약)
             max_pages = min(10, doc.page_count)
 
             for page_num in range(max_pages):
@@ -44,20 +40,15 @@ class PPTStyleAnalyzer:
 
                 page = doc[page_num]
 
-                # 페이지를 고해상도 이미지로 변환
-                mat = fitz.Matrix(2.0, 2.0)  # 2x 확대
+                mat = fitz.Matrix(2.0, 2.0)
                 pix = page.get_pixmap(matrix=mat)
 
-                # PIL Image로 변환
                 img_data = pix.tobytes("png")
 
-                # 이미지 크기 확인
                 st.write(f"페이지 {page_num + 1} 이미지 크기: {len(img_data)} bytes")
 
-                # base64 인코딩
                 base64_image = base64.b64encode(img_data).decode()
 
-                # GPT-4V로 각 페이지 분석
                 page_style = self.analyze_page_image(base64_image, page_num + 1)
 
                 if page_style:
@@ -72,7 +63,6 @@ class PPTStyleAnalyzer:
                 st.error("PDF에서 분석 가능한 스타일을 찾을 수 없습니다.")
                 return None
 
-            # 여러 페이지의 스타일을 통합
             unified_style = self.merge_styles(all_styles)
             st.success(f"총 {len(all_styles)}개 페이지의 스타일을 통합했습니다.")
             return unified_style
@@ -157,7 +147,6 @@ Respond with ONLY the JSON, no other text."""
                 result = response.json()
                 content = result['choices'][0]['message']['content']
 
-                # JSON 파싱을 위한 정리
                 content = content.replace('```json', '').replace('```', '').strip()
 
                 try:
@@ -182,7 +171,6 @@ Respond with ONLY the JSON, no other text."""
         if len(styles_list) == 1:
             return styles_list[0]
 
-        # 가장 많이 나타나는 스타일 요소들을 선택
         merged_style = {
             "color_palette": {},
             "typography": {},
@@ -192,14 +180,12 @@ Respond with ONLY the JSON, no other text."""
             "has_diagrams": any(style.get("has_diagrams", False) for style in styles_list)
         }
 
-        # 색상 팔레트 통합 (첫 번째 유효한 색상 사용)
         for style in styles_list:
             if style.get("color_palette"):
                 for key, value in style["color_palette"].items():
                     if key not in merged_style["color_palette"] and value:
                         merged_style["color_palette"][key] = value
 
-        # 다른 스타일 요소들도 유사하게 통합
         for category in ["typography", "layout", "visual_style"]:
             for style in styles_list:
                 if style.get(category):
@@ -207,7 +193,6 @@ Respond with ONLY the JSON, no other text."""
                         if key not in merged_style[category] and value:
                             merged_style[category][key] = value
 
-        # 브랜드 설명은 첫 번째 유효한 것 사용
         for style in styles_list:
             if style.get("brand_description") and not merged_style["brand_description"]:
                 merged_style["brand_description"] = style["brand_description"]
@@ -215,7 +200,6 @@ Respond with ONLY the JSON, no other text."""
 
         return merged_style
 
-    # 기존의 단일 이미지 분석 방법 (백업용)
     def analyze_ppt_style_single_image(self, image_data):
         """단일 이미지 분석 (기존 방법)"""
         if isinstance(image_data, bytes):
@@ -511,7 +495,7 @@ class PPTGenerationPipeline:
 
 def load_background_image():
     """배경 이미지 로드"""
-    background_path = "background.png"  # 나중에 경로 수정 가능
+    background_path = "background.png" 
     if os.path.exists(background_path):
         return background_path
     return None
@@ -522,7 +506,6 @@ def set_background_style():
     background_path = load_background_image()
 
     if background_path:
-        # 배경 이미지가 있는 경우
         st.markdown(f"""
         <style>
         .stApp {{
@@ -653,7 +636,6 @@ def get_base64_image(image_path):
 
 
 def main():
-    # 페이지 설정
     st.set_page_config(
         page_title="PPT Style Generator",
         page_icon="🎨",
@@ -661,19 +643,15 @@ def main():
         initial_sidebar_state="collapsed"
     )
 
-    # 배경 스타일 적용
     set_background_style()
 
-    # API 키 로드
     openai_key = load_api_key()
     if not openai_key:
         return
 
-    # 파이프라인 초기화
     if 'pipeline' not in st.session_state:
         st.session_state.pipeline = PPTGenerationPipeline(openai_key)
 
-    # 제목
     st.markdown('<div class="title">Welcome to CNU Img Generator</div>', unsafe_allow_html=True)
     st.markdown('<div class="subtitle">Upload your PPT and generate custom diagrams</div>', unsafe_allow_html=True)
 
@@ -689,7 +667,6 @@ def main():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 텍스트 입력
     user_input = st.text_area(
         "Enter your request in natural language:",
         height=100,
@@ -699,7 +676,6 @@ def main():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 3. 생성 버튼
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
         generate_button = st.button(
@@ -709,7 +685,6 @@ def main():
             disabled=not (uploaded_file and user_input)
         )
 
-    # 4. 결과 표시
     if generate_button and uploaded_file and user_input:
         st.markdown('<div class="result-container">', unsafe_allow_html=True)
 
@@ -718,7 +693,6 @@ def main():
         if result:
             st.markdown("### Generated Diagram")
 
-            # SVG 렌더링
             st.components.v1.html(
                 f"""
                 <div style="display: flex; justify-content: center; background: white; padding: 20px; border-radius: 10px; border: 1px solid #e0e0e0;">
@@ -728,7 +702,6 @@ def main():
                 height=800
             )
 
-            # 다운로드 버튼들
             col1, col2 = st.columns(2)
 
             with col1:
@@ -754,7 +727,6 @@ def main():
                 except ImportError:
                     st.info("Install cairosvg for PNG export: pip install cairosvg")
 
-            # 상세 정보 (접을 수 있는 형태)
             with st.expander("View Analysis Details"):
                 col1, col2 = st.columns(2)
 
